@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 )
 
 const protocol = "tcp"
@@ -130,7 +131,7 @@ func sendData(addr string, data []byte) {
 	}
 }
 
-func hand_balance1(bc *Blockchain) float64{
+func hand_balance1(bc *Blockchain) float64 {
 	// if !ValidateAddress(miningAddress) {
 	// 	log.Panic("ERROR: Address is not valid")
 	// }
@@ -143,7 +144,6 @@ func hand_balance1(bc *Blockchain) float64{
 	log.Print(miningAddress)
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 
-
 	UTXOs_self := UTXOSet.FindUTXO(pubKeyHash)
 	for _, out := range UTXOs_self {
 		balance_self += out.Value
@@ -154,12 +154,12 @@ func hand_balance1(bc *Blockchain) float64{
 	for _, out := range UTXOs_total {
 		balance_total += out.Value
 	}
-	lol := float64(balance_self)/float64(balance_total)
-	fmt.Printf("Balance of total: %v\n", lol)	
+	lol := float64(balance_self) / float64(balance_total)
+	fmt.Printf("Balance of total: %v\n", lol)
 	return lol
 }
 
-func hand_balance2(bc *Blockchain, from string) float64{
+func hand_balance2(bc *Blockchain, from string) float64 {
 	// if !ValidateAddress(miningAddress) {
 	// 	log.Panic("ERROR: Address is not valid")
 	// }
@@ -171,7 +171,6 @@ func hand_balance2(bc *Blockchain, from string) float64{
 	pubKeyHash := Base58Decode([]byte(from))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 
-
 	UTXOs_self := UTXOSet.FindUTXO(pubKeyHash)
 	for _, out := range UTXOs_self {
 		balance_self += out.Value
@@ -182,11 +181,10 @@ func hand_balance2(bc *Blockchain, from string) float64{
 	for _, out := range UTXOs_total {
 		balance_total += out.Value
 	}
-	lol := float64(balance_self)/float64(balance_total)
-	fmt.Printf("Balance of total: %v\n", lol)	
+	lol := float64(balance_self) / float64(balance_total)
+	fmt.Printf("Balance of total: %v\n", lol)
 	return lol
 }
-
 
 func sendInv(address, kind string, items [][]byte) {
 	inventory := inv{nodeAddress, kind, items}
@@ -299,6 +297,9 @@ func handleInv(request []byte, bc *Blockchain) {
 			}
 		}
 		blocksInTransit = newInTransit
+		// if nodeAddress == knownNodes[0] {
+
+		// }
 	}
 
 	if payload.Type == "tx" {
@@ -376,7 +377,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			}
 		}
 	} else {
-		if len(mempool) >= 2 && len(miningAddress) > 0 {
+		if len(mempool) >= 1 && len(miningAddress) > 0 {
 		MineTransactions:
 			var txs []*Transaction
 
@@ -394,23 +395,24 @@ func handleTx(request []byte, bc *Blockchain) {
 
 			cbTx := NewCoinbaseTX(miningAddress, "")
 			txs = append(txs, cbTx)
-
-			newBlock := bc.MineBlock(txs,miningAddress)
+			nodeID := os.Getenv("NODE_ID")
+			newBlock := bc.MineBlock(txs, miningAddress, nodeID)
 			UTXOSet := UTXOSet{bc}
 			UTXOSet.Update(newBlock)
 
 			fmt.Println("New block is mined!")
-
 			for _, tx := range txs {
 				txID := hex.EncodeToString(tx.ID)
 				delete(mempool, txID)
 			}
 
-			for _, node := range knownNodes {
-				if node != nodeAddress {
-					sendInv(node, "block", [][]byte{newBlock.Hash})
-				}
-			}
+			// for _, node := range knownNodes {
+			// 	if node != nodeAddress {
+			// 		sendInv(node, "block", [][]byte{newBlock.Hash})
+			// 	}
+			// }
+			// sendInv(knownNodes[0], "block", [][]byte{newBlock.Hash})
+			sendBlock(knownNodes[0], newBlock)
 
 			if len(mempool) > 0 {
 				goto MineTransactions

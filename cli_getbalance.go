@@ -6,6 +6,8 @@ import (
 )
 
 func (cli *CLI) getBalance(address, nodeID string) {
+	log.Printf("address: " + address)
+	log.Printf(nodeID)
 	if !ValidateAddress(address) {
 		log.Panic("ERROR: Address is not valid")
 	}
