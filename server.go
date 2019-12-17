@@ -17,7 +17,7 @@ const commandLength = 12
 
 var nodeAddress string
 var miningAddress string
-var knownNodes = []string{"localhost:3000"}
+var knownNodes = []string{"192.168.43.213:3000"}
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
 
@@ -130,7 +130,7 @@ func sendData(addr string, data []byte) {
 	}
 }
 
-func hand_balance1(bc *Blockchain) float64{
+func hand_balance1(bc *Blockchain) float64 {
 	// if !ValidateAddress(miningAddress) {
 	// 	log.Panic("ERROR: Address is not valid")
 	// }
@@ -143,7 +143,6 @@ func hand_balance1(bc *Blockchain) float64{
 	log.Print(miningAddress)
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 
-
 	UTXOs_self := UTXOSet.FindUTXO(pubKeyHash)
 	for _, out := range UTXOs_self {
 		balance_self += out.Value
@@ -154,12 +153,12 @@ func hand_balance1(bc *Blockchain) float64{
 	for _, out := range UTXOs_total {
 		balance_total += out.Value
 	}
-	lol := float64(balance_self)/float64(balance_total)
-	fmt.Printf("Balance of total: %v\n", lol)	
+	lol := float64(balance_self) / float64(balance_total)
+	fmt.Printf("Balance of total: %v\n", lol)
 	return lol
 }
 
-func hand_balance2(bc *Blockchain, from string) float64{
+func hand_balance2(bc *Blockchain, from string) float64 {
 	// if !ValidateAddress(miningAddress) {
 	// 	log.Panic("ERROR: Address is not valid")
 	// }
@@ -171,7 +170,6 @@ func hand_balance2(bc *Blockchain, from string) float64{
 	pubKeyHash := Base58Decode([]byte(from))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 
-
 	UTXOs_self := UTXOSet.FindUTXO(pubKeyHash)
 	for _, out := range UTXOs_self {
 		balance_self += out.Value
@@ -182,11 +180,10 @@ func hand_balance2(bc *Blockchain, from string) float64{
 	for _, out := range UTXOs_total {
 		balance_total += out.Value
 	}
-	lol := float64(balance_self)/float64(balance_total)
-	fmt.Printf("Balance of total: %v\n", lol)	
+	lol := float64(balance_self) / float64(balance_total)
+	fmt.Printf("Balance of total: %v\n", lol)
 	return lol
 }
-
 
 func sendInv(address, kind string, items [][]byte) {
 	inventory := inv{nodeAddress, kind, items}
@@ -287,18 +284,20 @@ func handleInv(request []byte, bc *Blockchain) {
 	fmt.Printf("Recevied inventory with %d %s\n", len(payload.Items), payload.Type)
 
 	if payload.Type == "block" {
-		blocksInTransit = payload.Items
+		if nodeAddress == knownNodes[0] {
+			blocksInTransit = payload.Items
 
-		blockHash := payload.Items[0]
-		sendGetData(payload.AddrFrom, "block", blockHash)
+			blockHash := payload.Items[0]
+			sendGetData(payload.AddrFrom, "block", blockHash)
 
-		newInTransit := [][]byte{}
-		for _, b := range blocksInTransit {
-			if bytes.Compare(b, blockHash) != 0 {
-				newInTransit = append(newInTransit, b)
+			newInTransit := [][]byte{}
+			for _, b := range blocksInTransit {
+				if bytes.Compare(b, blockHash) != 0 {
+					newInTransit = append(newInTransit, b)
+				}
 			}
+			blocksInTransit = newInTransit
 		}
-		blocksInTransit = newInTransit
 	}
 
 	if payload.Type == "tx" {
@@ -357,7 +356,7 @@ func handleGetData(request []byte, bc *Blockchain) {
 func handleTx(request []byte, bc *Blockchain) {
 	var buff bytes.Buffer
 	var payload tx
-
+	var flag int
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
@@ -368,15 +367,25 @@ func handleTx(request []byte, bc *Blockchain) {
 	txData := payload.Transaction
 	tx := DeserializeTransaction(txData)
 	mempool[hex.EncodeToString(tx.ID)] = tx
-
 	if nodeAddress == knownNodes[0] {
 		for _, node := range knownNodes {
+			flag = 0
 			if node != nodeAddress && node != payload.AddFrom {
+				for id := range mempool {
+					tx := mempool[id]
+					if bc.VerifyTransaction(&tx) {
+						sendVersion(payload.AddFrom, bc)
+						flag = 1
+						break
+					}
+				}
+			}
+			if node != nodeAddress && node != payload.AddFrom && flag == 0 {
 				sendInv(node, "tx", [][]byte{tx.ID})
 			}
 		}
 	} else {
-		if len(mempool) >= 2 && len(miningAddress) > 0 {
+		if len(mempool) >= 1 && len(miningAddress) > 0 {
 		MineTransactions:
 			var txs []*Transaction
 
@@ -395,7 +404,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			cbTx := NewCoinbaseTX(miningAddress, "")
 			txs = append(txs, cbTx)
 
-			newBlock := bc.MineBlock(txs,miningAddress)
+			newBlock := bc.MineBlock(txs, miningAddress)
 			UTXOSet := UTXOSet{bc}
 			UTXOSet.Update(newBlock)
 
@@ -406,12 +415,13 @@ func handleTx(request []byte, bc *Blockchain) {
 				delete(mempool, txID)
 			}
 
-			for _, node := range knownNodes {
-				if node != nodeAddress {
-					sendInv(node, "block", [][]byte{newBlock.Hash})
-				}
-			}
-
+			// for _, node := range knownNodes {
+			// 	if node != nodeAddress {
+			// 		log.Println(node)
+			// 		sendInv(node, "block", [][]byte{newBlock.Hash})
+			// 	}
+			// }
+			sendInv(knownNodes[0], "block", [][]byte{newBlock.Hash})
 			if len(mempool) > 0 {
 				goto MineTransactions
 			}
@@ -432,11 +442,14 @@ func handleVersion(request []byte, bc *Blockchain) {
 
 	myBestHeight := bc.GetBestHeight()
 	foreignerBestHeight := payload.BestHeight
-
-	if myBestHeight < foreignerBestHeight {
-		sendGetBlocks(payload.AddrFrom)
-	} else if myBestHeight > foreignerBestHeight {
-		sendVersion(payload.AddrFrom, bc)
+	if nodeAddress == knownNodes[0] {
+		if myBestHeight < foreignerBestHeight {
+			sendGetBlocks(payload.AddrFrom)
+		} else if myBestHeight > foreignerBestHeight {
+			sendVersion(payload.AddrFrom, bc)
+		}
+	} else {
+		sendGetBlocks(knownNodes[0])
 	}
 
 	// sendAddr(payload.AddrFrom)
@@ -477,7 +490,7 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 
 // StartServer starts a node
 func StartServer(nodeID, minerAddress string) {
-	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
+	nodeAddress = fmt.Sprintf("192.168.43.98:%s", nodeID)
 	miningAddress = minerAddress
 	ln, err := net.Listen(protocol, nodeAddress)
 	if err != nil {
