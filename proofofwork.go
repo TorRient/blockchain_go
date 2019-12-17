@@ -49,7 +49,6 @@ func NewGenProofOfWork(b *Block) *ProofOfWork {
 	return pow
 }
 
-
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{

@@ -17,7 +17,7 @@ const commandLength = 12
 
 var nodeAddress string
 var miningAddress string
-var knownNodes = []string{"localhost:3000"}
+var knownNodes = []string{"192.168.43.213:3000"}
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
 
@@ -227,6 +227,15 @@ func sendVersion(addr string, bc *Blockchain) {
 	sendData(addr, request)
 }
 
+func sendUpdate(addr string, bc *Blockchain) {
+	bestHeight := bc.GetBestHeight()
+	payload := gobEncode(verzion{nodeVersion, bestHeight, nodeAddress})
+
+	request := append(commandToBytes("version"), payload...)
+
+	sendData(addr, request)
+}
+
 func handleAddr(request []byte) {
 	var buff bytes.Buffer
 	var payload addr
@@ -357,7 +366,7 @@ func handleGetData(request []byte, bc *Blockchain) {
 func handleTx(request []byte, bc *Blockchain) {
 	var buff bytes.Buffer
 	var payload tx
-
+	var flag int
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
@@ -371,7 +380,18 @@ func handleTx(request []byte, bc *Blockchain) {
 
 	if nodeAddress == knownNodes[0] {
 		for _, node := range knownNodes {
-			if node != nodeAddress && node != payload.AddFrom {
+			flag = 0
+			if node != nodeAddress && node == payload.AddFrom{
+				for id := range mempool {
+					tx := mempool[id]
+					if bc.VerifyTransaction(&tx) {
+						sendUpdate(payload.AddFrom, bc)
+						flag = 1
+						break
+					}
+				}
+			}
+			if node != nodeAddress && node != payload.AddFrom && flag == 0 {
 				sendInv(node, "tx", [][]byte{tx.ID})
 			}
 		}
@@ -445,6 +465,34 @@ func handleVersion(request []byte, bc *Blockchain) {
 	}
 }
 
+func handleUpdate(request []byte, bc *Blockchain) {
+	var buff bytes.Buffer
+	var payload verzion
+
+	buff.Write(request[commandLength:])
+	dec := gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	myBestHeight := bc.GetBestHeight()
+	foreignerBestHeight := payload.BestHeight
+
+	if myBestHeight < foreignerBestHeight {
+		sendGetBlocks(payload.AddrFrom)
+	} else if myBestHeight > foreignerBestHeight {
+		sendVersion(payload.AddrFrom, bc)
+	}else{
+		sendUpdate(payload.AddrFrom,bc)
+	}
+
+	// sendAddr(payload.AddrFrom)
+	if !nodeIsKnown(payload.AddrFrom) {
+		knownNodes = append(knownNodes, payload.AddrFrom)
+	}
+}
+
 func handleConnection(conn net.Conn, bc *Blockchain) {
 	request, err := ioutil.ReadAll(conn)
 	if err != nil {
@@ -477,7 +525,7 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 
 // StartServer starts a node
 func StartServer(nodeID, minerAddress string) {
-	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
+	nodeAddress = fmt.Sprintf("192.168.43.104:%s", nodeID)
 	miningAddress = minerAddress
 	ln, err := net.Listen(protocol, nodeAddress)
 	if err != nil {
