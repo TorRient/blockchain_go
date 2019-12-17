@@ -231,7 +231,7 @@ func sendUpdate(addr string, bc *Blockchain) {
 	bestHeight := bc.GetBestHeight()
 	payload := gobEncode(verzion{nodeVersion, bestHeight, nodeAddress})
 
-	request := append(commandToBytes("version"), payload...)
+	request := append(commandToBytes("update"), payload...)
 
 	sendData(addr, request)
 }
@@ -510,6 +510,8 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 		handleInv(request, bc)
 	case "getblocks":
 		handleGetBlocks(request, bc)
+	case "update":
+		handleUpdate(request, bc)
 	case "getdata":
 		handleGetData(request, bc)
 	case "tx":
