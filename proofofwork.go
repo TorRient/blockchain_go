@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+
 	// "os"
 	"log"
 	// "strconv"
@@ -29,7 +30,7 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 	var tar int
 
 	target := big.NewInt(1)
-	tar = targetBits - int(targetBits*b.Percent)
+	tar = targetBits - int(targetBits*b.PercentBalance)
 
 	log.Print(tar)
 	target.Lsh(target, uint(256-tar))
@@ -39,7 +40,7 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 	return pow
 }
 
-// NewGendProofOfWork builds and returns a ProofOfWork
+// NewGenProofOfWork builds and returns a ProofOfWork
 func NewGenProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
@@ -48,7 +49,6 @@ func NewGenProofOfWork(b *Block) *ProofOfWork {
 
 	return pow
 }
-
 
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join(

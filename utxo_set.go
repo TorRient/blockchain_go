@@ -73,7 +73,7 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	return UTXOs
 }
 
-// FindUTXO finds UTXO for a public key hash
+// FindAllUTXO finds UTXO for a public key hash
 func (u UTXOSet) FindAllUTXO() []TXOutput {
 	var UTXOs []TXOutput
 	db := u.Blockchain.db

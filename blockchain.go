@@ -233,7 +233,7 @@ func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
 		blockData := b.Get(blockHash)
 
 		if blockData == nil {
-			return errors.New("Block is not found.")
+			return errors.New("block is not found")
 		}
 
 		block = *DeserializeBlock(blockData)
@@ -269,7 +269,8 @@ func (bc *Blockchain) GetBlockHashes() [][]byte {
 func (bc *Blockchain) MineBlock(transactions []*Transaction, from string) *Block {
 	var lastHash []byte
 	var lastHeight int
-	var percent float64
+	var PercentBalance float64
+	var PercentMine float64
 	for _, tx := range transactions {
 		// TODO: ignore transaction if it's not valid
 		if bc.VerifyTransaction(tx) != true {
@@ -279,9 +280,10 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction, from string) *Block
 	// if from == "1"{
 	// 	percent = hand_balance1(bc)
 	// }else {
-	percent = hand_balance2(bc, from)
+	PercentBalance = hand_balance2(bc, from)
+	PercentMine = handleMines(bc, from)
 	// }
-	
+
 	err := bc.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
@@ -297,7 +299,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction, from string) *Block
 		log.Panic(err)
 	}
 
-	newBlock := NewBlock(transactions, lastHash, lastHeight+1, percent)
+	newBlock := NewBlock(transactions, lastHash, lastHeight+1, PercentBalance, PercentMine)
 
 	err = bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
