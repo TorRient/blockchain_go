@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"strconv"
 )
 
 const protocol = "tcp"
@@ -18,7 +17,7 @@ const commandLength = 12
 
 var nodeAddress string
 var miningAddress string
-var knownNodes = []string{"localhost:3000"}
+var knownNodes = []string{"192.168.43.213:3000"}
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
 
@@ -228,35 +227,39 @@ func handleMines(bc *Blockchain, from string) float64 {
 		block := bci.Next()
 		// flag := 0
 
-		fmt.Printf("============ Block %x ============\n", block.Hash)
-		fmt.Printf("Height: %d\n", block.Height)
-		fmt.Printf("Prev. block: %x\n", block.PrevBlockHash)
-		pow := NewProofOfWork(block)
-		fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate()))
+		// fmt.Printf("============ Block %x ============\n", block.Hash)
+		// fmt.Printf("Height: %d\n", block.Height)
+		// fmt.Printf("Prev. block: %x\n", block.PrevBlockHash)
+		// pow := NewProofOfWork(block)
+		// fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate()))
 		countAll++
 
-		tx := block.Transactions[0]
-		// fmt.Println(tx)
-		var lines []string
-		lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+		for _, tx := range block.Transactions {
+			// fmt.Println(tx)
+			var lines []string
+			lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
 
-		for i, input := range tx.Vin {
+			for i, input := range tx.Vin {
 
-			lines = append(lines, fmt.Sprintf("     Input %d:", i))
-			lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
-			lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
-			lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
-			lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
-		}
+				lines = append(lines, fmt.Sprintf("     Input %d:", i))
+				lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+				lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+				lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+				lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
 
-		for i, output := range tx.Vout {
-			lines = append(lines, fmt.Sprintf("     Output %d:", i))
-			lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
-			lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
-			if string(output.PubKeyHash) == string(pubKeyHash) {
-				count++
+				for i, output := range tx.Vout {
+					lines = append(lines, fmt.Sprintf("     Output %d:", i))
+					lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+					lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+					if input.Vout == -1 {
+						if string(output.PubKeyHash) == string(pubKeyHash) {
+							count++
+						}
+					}
+				}
 			}
 		}
+
 		// 	if i == 1 && string(pubKeyHash) == string(output.PubKeyHash) && flag == 0 {
 		// 		count++
 		// 		flag = 1
@@ -609,7 +612,7 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 
 // StartServer starts a node
 func StartServer(nodeID, minerAddress string) {
-	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
+	nodeAddress = fmt.Sprintf("192.168.43.213:%s", nodeID)
 	miningAddress = minerAddress
 	ln, err := net.Listen(protocol, nodeAddress)
 	if err != nil {
