@@ -9,18 +9,19 @@ import (
 
 // Block represents a block in the blockchain
 type Block struct {
-	Timestamp     int64
-	Transactions  []*Transaction
-	PrevBlockHash []byte
-	Hash          []byte
-	Nonce         int
-	Height        int
-	Percent       float64
+	Timestamp      int64
+	Transactions   []*Transaction
+	PrevBlockHash  []byte
+	Hash           []byte
+	Nonce          int
+	Height         int
+	PercentBalance float64
+	PercentMine    float64
 }
 
 // NewBlock creates and returns Block
-func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int, percent float64) *Block {
-	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height, percent}
+func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int, percentBalance float64, percentMine float64) *Block {
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height, percentBalance, percentMine}
 	pow := NewProofOfWork(block)
 	log.Print("come here13")
 	nonce, hash := pow.Run()
@@ -33,7 +34,7 @@ func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int, per
 
 // NewGenBlock creates and returns Block
 func NewGenBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block {
-	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height, 1}
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height, 1, 1}
 	pow := NewGenProofOfWork(block)
 	nonce, hash := pow.Run()
 

@@ -186,6 +186,67 @@ func hand_balance2(bc *Blockchain, from string) float64 {
 	return lol
 }
 
+func handleMines(bc *Blockchain, from string) float64 {
+
+	countAll := 0
+	count := 0
+	bci := bc.Iterator()
+
+	pubKeyHash := Base58Decode([]byte(from))
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+
+	for {
+		block := bci.Next()
+		// flag := 0
+
+		// fmt.Printf("============ Block %x ============\n", block.Hash)
+		// fmt.Printf("Height: %d\n", block.Height)
+		// fmt.Printf("Prev. block: %x\n", block.PrevBlockHash)
+		// pow := NewProofOfWork(block)
+		// fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate()))
+		countAll++
+
+		for _, tx := range block.Transactions {
+			// fmt.Println(tx)
+			var lines []string
+			lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+
+			for i, input := range tx.Vin {
+
+				lines = append(lines, fmt.Sprintf("     Input %d:", i))
+				lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+				lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+				lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+				lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
+
+				for i, output := range tx.Vout {
+					lines = append(lines, fmt.Sprintf("     Output %d:", i))
+					lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+					lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+					if input.Vout == -1 {
+						if string(output.PubKeyHash) == string(pubKeyHash) {
+							count++
+						}
+					}
+				}
+			}
+		}
+
+		fmt.Printf("\n\n")
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	log.Printf("Mined: %d\n", count)
+	log.Printf("Total mined: %d\n", countAll)
+	percentMine := float64(count) / float64(countAll)
+	log.Printf("Percent of mine: %v", percentMine)
+
+	return percentMine
+}
+
 func sendInv(address, kind string, items [][]byte) {
 	inventory := inv{nodeAddress, kind, items}
 	payload := gobEncode(inventory)
@@ -413,6 +474,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			// }
 			// sendInv(knownNodes[0], "block", [][]byte{newBlock.Hash})
 			sendBlock(knownNodes[0], newBlock)
+			sendVersion(knownNodes[0], bc)
 
 			if len(mempool) > 0 {
 				goto MineTransactions

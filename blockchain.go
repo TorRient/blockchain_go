@@ -269,7 +269,8 @@ func (bc *Blockchain) GetBlockHashes() [][]byte {
 func (bc *Blockchain) MineBlock(transactions []*Transaction, from string, nodeID string) *Block {
 	var lastHash []byte
 	var lastHeight int
-	var percent float64
+	var percentBalance float64
+	var percentMine float64
 	for _, tx := range transactions {
 		// TODO: ignore transaction if it's not valid
 		if bc.VerifyTransaction(tx) != true {
@@ -279,7 +280,8 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction, from string, nodeID
 	// if from == "1"{
 	// 	percent = hand_balance1(bc)
 	// }else {
-	percent = hand_balance2(bc, from)
+	percentBalance = hand_balance2(bc, from)
+	percentMine = handleMines(bc, from)
 	// }
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
@@ -297,7 +299,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction, from string, nodeID
 		log.Panic(err)
 	}
 
-	newBlock := NewBlock(transactions, lastHash, lastHeight+1, percent)
+	newBlock := NewBlock(transactions, lastHash, lastHeight+1, percentBalance, percentMine)
 
 	if nodeID == "3000" {
 		err = bc.db.Update(func(tx *bolt.Tx) error {
