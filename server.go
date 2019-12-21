@@ -413,6 +413,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			// }
 			// sendInv(knownNodes[0], "block", [][]byte{newBlock.Hash})
 			sendBlock(knownNodes[0], newBlock)
+			sendVersion(knownNodes[0], bc)
 
 			if len(mempool) > 0 {
 				goto MineTransactions
