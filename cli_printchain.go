@@ -6,6 +6,7 @@ import (
 )
 
 func (cli *CLI) printChain(nodeID string) {
+	// var data [][]string
 	bc := NewBlockchain(nodeID)
 	defer bc.db.Close()
 
@@ -28,4 +29,26 @@ func (cli *CLI) printChain(nodeID string) {
 			break
 		}
 	}
+
+	// data = csvExport(nodeID)
+	// data = append(data, []string{"s", "z"})
+	// dataString := strings.Join(data, " ")
+	// log.Printf(dataString)
+
+	//Write to csv
+	// file, err := os.Create("result.csv")
+	// if err != nil {
+	// 	return err
+	// }
+	// defer file.Close()
+
+	// writer := csv.NewWriter(file)
+	// defer writer.Flush()
+
+	// for _, value := range data {
+	// 	if err := writer.Write(value); err != nil {
+	// 		return err
+	// 	}
+	// }
+	// return nil
 }

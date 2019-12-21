@@ -247,6 +247,64 @@ func handleMines(bc *Blockchain, from string) float64 {
 	return percentMine
 }
 
+func csvExport(nodeID string) [][]string {
+	//Prepare data
+	data := [][]string{}
+	data = append(data, []string{"Address", "NumMines"})
+
+	wallets, err := NewWallets(nodeID)
+	if err != nil {
+		log.Panic(err)
+	}
+	addresses := wallets.GetAddresses()
+
+	for _, address := range addresses {
+		count := 0
+		bc := NewBlockchain(nodeID)
+		bci := bc.Iterator()
+
+		pubKeyHash := Base58Decode([]byte(string(address)))
+		pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+		for {
+			block := bci.Next()
+
+			for _, tx := range block.Transactions {
+				// fmt.Println(tx)
+				var lines []string
+				lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+
+				for i, input := range tx.Vin {
+
+					lines = append(lines, fmt.Sprintf("     Input %d:", i))
+					lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+					lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+					lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+					lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
+
+					for i, output := range tx.Vout {
+						lines = append(lines, fmt.Sprintf("     Output %d:", i))
+						lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+						lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+						if input.Vout == -1 {
+							if string(output.PubKeyHash) == string(pubKeyHash) {
+								count++
+							}
+						}
+					}
+				}
+			}
+		}
+		// fmt.Printf("Address: %s \n NumMines: %s", node, string(count))
+		data = append(data, []string{string(address), "hihi"})
+
+	}
+	// data = append(data, []string{"secret", "address"})
+	// data = append(data, []string{"secret1", "address1"})
+	// data = append(data, []string{"secret2", "address2"})
+
+	return data
+}
+
 func sendInv(address, kind string, items [][]byte) {
 	inventory := inv{nodeAddress, kind, items}
 	payload := gobEncode(inventory)
@@ -447,6 +505,7 @@ func handleTx(request []byte, bc *Blockchain) {
 				if bc.VerifyTransaction(&tx) {
 					txs = append(txs, &tx)
 				}
+				// txs = append(txs, &tx)
 			}
 
 			if len(txs) == 0 {
