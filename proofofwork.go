@@ -6,10 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-
-	// "os"
-	"log"
-	// "strconv"
 )
 
 var (
@@ -22,30 +18,14 @@ const targetBits = 16
 type ProofOfWork struct {
 	block  *Block
 	target *big.Int
-	tar    int
 }
 
 // NewProofOfWork builds and returns a ProofOfWork
 func NewProofOfWork(b *Block) *ProofOfWork {
-	var tar int
-
-	target := big.NewInt(1)
-	tar = targetBits - int(math.Round(0.21*targetBits*b.PercentBalance)) + int(math.Round(0.15*targetBits*b.PercentMine))
-
-	log.Print(tar)
-	target.Lsh(target, uint(256-tar))
-
-	pow := &ProofOfWork{b, target, tar}
-
-	return pow
-}
-
-// NewGendProofOfWork builds and returns a ProofOfWork
-func NewGenProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
-	pow := &ProofOfWork{b, target, targetBits}
+	pow := &ProofOfWork{b, target}
 
 	return pow
 }
@@ -56,7 +36,7 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 			pow.block.PrevBlockHash,
 			pow.block.HashTransactions(),
 			IntToHex(pow.block.Timestamp),
-			IntToHex(int64(pow.tar)),
+			IntToHex(int64(targetBits)),
 			IntToHex(int64(nonce)),
 		},
 		[]byte{},
@@ -70,14 +50,15 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	var hashInt big.Int
 	var hash [32]byte
 	nonce := 0
-	log.Print("thuyen1")
+
 	fmt.Printf("Mining a new block")
-	log.Print("thuyen2")
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
 
 		hash = sha256.Sum256(data)
-		// fmt.Printf("\r%x", hash)
+		if math.Remainder(float64(nonce), 100000) == 0 {
+			fmt.Printf("\r%x", hash)
+		}
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {

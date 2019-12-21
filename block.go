@@ -9,33 +9,18 @@ import (
 
 // Block represents a block in the blockchain
 type Block struct {
-	Timestamp      int64
-	Transactions   []*Transaction
-	PrevBlockHash  []byte
-	Hash           []byte
-	Nonce          int
-	Height         int
-	PercentBalance float64
-	PercentMine    float64
+	Timestamp     int64
+	Transactions  []*Transaction
+	PrevBlockHash []byte
+	Hash          []byte
+	Nonce         int
+	Height        int
 }
 
 // NewBlock creates and returns Block
-func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int, percentBalance float64, percentMine float64) *Block {
-	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height, percentBalance, percentMine}
+func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block {
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height}
 	pow := NewProofOfWork(block)
-	log.Print("come here13")
-	nonce, hash := pow.Run()
-
-	block.Hash = hash[:]
-	block.Nonce = nonce
-
-	return block
-}
-
-// NewGenBlock creates and returns Block
-func NewGenBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block {
-	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height, 1, 1}
-	pow := NewGenProofOfWork(block)
 	nonce, hash := pow.Run()
 
 	block.Hash = hash[:]
@@ -46,7 +31,7 @@ func NewGenBlock(transactions []*Transaction, prevBlockHash []byte, height int) 
 
 // NewGenesisBlock creates and returns genesis Block
 func NewGenesisBlock(coinbase *Transaction) *Block {
-	return NewGenBlock([]*Transaction{coinbase}, []byte{}, 0)
+	return NewBlock([]*Transaction{coinbase}, []byte{}, 0)
 }
 
 // HashTransactions returns a hash of the transactions in the block

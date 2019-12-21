@@ -73,32 +73,6 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	return UTXOs
 }
 
-// FindUTXO finds UTXO for a public key hash
-func (u UTXOSet) FindAllUTXO() []TXOutput {
-	var UTXOs []TXOutput
-	db := u.Blockchain.db
-
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
-		c := b.Cursor()
-
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			outs := DeserializeOutputs(v)
-
-			for _, out := range outs.Outputs {
-				UTXOs = append(UTXOs, out)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		log.Panic(err)
-	}
-
-	return UTXOs
-}
-
 // CountTransactions returns the number of transactions in the UTXO set
 func (u UTXOSet) CountTransactions() int {
 	db := u.Blockchain.db

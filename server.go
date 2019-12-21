@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"os"
 )
 
 const protocol = "tcp"
@@ -18,7 +17,7 @@ const commandLength = 12
 
 var nodeAddress string
 var miningAddress string
-var knownNodes = []string{"localhost:3000"}
+var knownNodes = []string{"192.168.43.213:3000"}
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
 
@@ -129,180 +128,6 @@ func sendData(addr string, data []byte) {
 	if err != nil {
 		log.Panic(err)
 	}
-}
-
-func hand_balance1(bc *Blockchain) float64 {
-	// if !ValidateAddress(miningAddress) {
-	// 	log.Panic("ERROR: Address is not valid")
-	// }
-	UTXOSet := UTXOSet{bc}
-	// defer bc.db.Close()
-
-	balance_self := 0
-	balance_total := 0
-	pubKeyHash := Base58Decode([]byte(miningAddress))
-	log.Print(miningAddress)
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-
-	UTXOs_self := UTXOSet.FindUTXO(pubKeyHash)
-	for _, out := range UTXOs_self {
-		balance_self += out.Value
-	}
-	fmt.Printf("Balance of '%s': %d\n", miningAddress, balance_self)
-
-	UTXOs_total := UTXOSet.FindAllUTXO()
-	for _, out := range UTXOs_total {
-		balance_total += out.Value
-	}
-	lol := float64(balance_self) / float64(balance_total)
-	fmt.Printf("Balance of total: %v\n", lol)
-	return lol
-}
-
-func hand_balance2(bc *Blockchain, from string) float64 {
-	// if !ValidateAddress(miningAddress) {
-	// 	log.Panic("ERROR: Address is not valid")
-	// }
-	UTXOSet := UTXOSet{bc}
-	// defer bc.db.Close()
-
-	balance_self := 0
-	balance_total := 0
-	pubKeyHash := Base58Decode([]byte(from))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-
-	UTXOs_self := UTXOSet.FindUTXO(pubKeyHash)
-	for _, out := range UTXOs_self {
-		balance_self += out.Value
-	}
-	fmt.Printf("Balance of '%s': %d\n", from, balance_self)
-
-	UTXOs_total := UTXOSet.FindAllUTXO()
-	for _, out := range UTXOs_total {
-		balance_total += out.Value
-	}
-	lol := float64(balance_self) / float64(balance_total)
-	fmt.Printf("Balance of total: %v\n", lol)
-	return lol
-}
-
-func handleMines(bc *Blockchain, from string) float64 {
-
-	countAll := 0
-	count := 0
-	bci := bc.Iterator()
-
-	pubKeyHash := Base58Decode([]byte(from))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-
-	for {
-		block := bci.Next()
-		// flag := 0
-
-		// fmt.Printf("============ Block %x ============\n", block.Hash)
-		// fmt.Printf("Height: %d\n", block.Height)
-		// fmt.Printf("Prev. block: %x\n", block.PrevBlockHash)
-		// pow := NewProofOfWork(block)
-		// fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate()))
-		countAll++
-
-		for _, tx := range block.Transactions {
-			// fmt.Println(tx)
-			var lines []string
-			lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
-
-			for i, input := range tx.Vin {
-
-				lines = append(lines, fmt.Sprintf("     Input %d:", i))
-				lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
-				lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
-				lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
-				lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
-
-				for i, output := range tx.Vout {
-					lines = append(lines, fmt.Sprintf("     Output %d:", i))
-					lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
-					lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
-					if input.Vout == -1 {
-						if string(output.PubKeyHash) == string(pubKeyHash) {
-							count++
-						}
-					}
-				}
-			}
-		}
-
-		fmt.Printf("\n\n")
-
-		if len(block.PrevBlockHash) == 0 {
-			break
-		}
-	}
-
-	log.Printf("Mined: %d\n", count)
-	log.Printf("Total mined: %d\n", countAll)
-	percentMine := float64(count) / float64(countAll)
-	log.Printf("Percent of mine: %v", percentMine)
-
-	return percentMine
-}
-
-func csvExport(nodeID string) [][]string {
-	//Prepare data
-	data := [][]string{}
-	data = append(data, []string{"Address", "NumMines"})
-
-	wallets, err := NewWallets(nodeID)
-	if err != nil {
-		log.Panic(err)
-	}
-	addresses := wallets.GetAddresses()
-
-	for _, address := range addresses {
-		count := 0
-		bc := NewBlockchain(nodeID)
-		bci := bc.Iterator()
-
-		pubKeyHash := Base58Decode([]byte(string(address)))
-		pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-		for {
-			block := bci.Next()
-
-			for _, tx := range block.Transactions {
-				// fmt.Println(tx)
-				var lines []string
-				lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
-
-				for i, input := range tx.Vin {
-
-					lines = append(lines, fmt.Sprintf("     Input %d:", i))
-					lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
-					lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
-					lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
-					lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
-
-					for i, output := range tx.Vout {
-						lines = append(lines, fmt.Sprintf("     Output %d:", i))
-						lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
-						lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
-						if input.Vout == -1 {
-							if string(output.PubKeyHash) == string(pubKeyHash) {
-								count++
-							}
-						}
-					}
-				}
-			}
-		}
-		// fmt.Printf("Address: %s \n NumMines: %s", node, string(count))
-		data = append(data, []string{string(address), "hihi"})
-
-	}
-	// data = append(data, []string{"secret", "address"})
-	// data = append(data, []string{"secret1", "address1"})
-	// data = append(data, []string{"secret2", "address2"})
-
-	return data
 }
 
 func sendInv(address, kind string, items [][]byte) {
@@ -416,9 +241,6 @@ func handleInv(request []byte, bc *Blockchain) {
 			}
 		}
 		blocksInTransit = newInTransit
-		// if nodeAddress == knownNodes[0] {
-
-		// }
 	}
 
 	if payload.Type == "tx" {
@@ -496,7 +318,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			}
 		}
 	} else {
-		if len(mempool) >= 1 && len(miningAddress) > 0 {
+		if len(mempool) >= 2 && len(miningAddress) > 0 {
 		MineTransactions:
 			var txs []*Transaction
 
@@ -505,7 +327,6 @@ func handleTx(request []byte, bc *Blockchain) {
 				if bc.VerifyTransaction(&tx) {
 					txs = append(txs, &tx)
 				}
-				// txs = append(txs, &tx)
 			}
 
 			if len(txs) == 0 {
@@ -515,25 +336,23 @@ func handleTx(request []byte, bc *Blockchain) {
 
 			cbTx := NewCoinbaseTX(miningAddress, "")
 			txs = append(txs, cbTx)
-			nodeID := os.Getenv("NODE_ID")
-			newBlock := bc.MineBlock(txs, miningAddress, nodeID)
+
+			newBlock := bc.MineBlock(txs)
 			UTXOSet := UTXOSet{bc}
-			UTXOSet.Update(newBlock)
+			UTXOSet.Reindex()
 
 			fmt.Println("New block is mined!")
+
 			for _, tx := range txs {
 				txID := hex.EncodeToString(tx.ID)
 				delete(mempool, txID)
 			}
 
-			// for _, node := range knownNodes {
-			// 	if node != nodeAddress {
-			// 		sendInv(node, "block", [][]byte{newBlock.Hash})
-			// 	}
-			// }
-			// sendInv(knownNodes[0], "block", [][]byte{newBlock.Hash})
-			sendBlock(knownNodes[0], newBlock)
-			sendVersion(knownNodes[0], bc)
+			for _, node := range knownNodes {
+				if node != nodeAddress {
+					sendInv(node, "block", [][]byte{newBlock.Hash})
+				}
+			}
 
 			if len(mempool) > 0 {
 				goto MineTransactions
@@ -600,7 +419,7 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 
 // StartServer starts a node
 func StartServer(nodeID, minerAddress string) {
-	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
+	nodeAddress = fmt.Sprintf("192.168.43.213:%s", nodeID)
 	miningAddress = minerAddress
 	ln, err := net.Listen(protocol, nodeAddress)
 	if err != nil {

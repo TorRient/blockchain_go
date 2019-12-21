@@ -266,23 +266,16 @@ func (bc *Blockchain) GetBlockHashes() [][]byte {
 }
 
 // MineBlock mines a new block with the provided transactions
-func (bc *Blockchain) MineBlock(transactions []*Transaction, from string, nodeID string) *Block {
+func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	var lastHash []byte
 	var lastHeight int
-	var percentBalance float64
-	var percentMine float64
+
 	for _, tx := range transactions {
 		// TODO: ignore transaction if it's not valid
 		if bc.VerifyTransaction(tx) != true {
 			log.Panic("ERROR: Invalid transaction")
 		}
 	}
-	// if from == "1"{
-	// 	percent = hand_balance1(bc)
-	// }else {
-	percentBalance = hand_balance2(bc, from)
-	percentMine = handleMines(bc, from)
-	// }
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
@@ -299,28 +292,26 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction, from string, nodeID
 		log.Panic(err)
 	}
 
-	newBlock := NewBlock(transactions, lastHash, lastHeight+1, percentBalance, percentMine)
+	newBlock := NewBlock(transactions, lastHash, lastHeight+1)
 
-	if nodeID == "3000" {
-		err = bc.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(blocksBucket))
-			err := b.Put(newBlock.Hash, newBlock.Serialize())
-			if err != nil {
-				log.Panic(err)
-			}
-
-			err = b.Put([]byte("l"), newBlock.Hash)
-			if err != nil {
-				log.Panic(err)
-			}
-
-			bc.tip = newBlock.Hash
-
-			return nil
-		})
+	err = bc.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		err := b.Put(newBlock.Hash, newBlock.Serialize())
 		if err != nil {
 			log.Panic(err)
 		}
+
+		err = b.Put([]byte("l"), newBlock.Hash)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		bc.tip = newBlock.Hash
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
 	}
 
 	return newBlock

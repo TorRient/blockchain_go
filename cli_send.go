@@ -22,13 +22,14 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 		log.Panic(err)
 	}
 	wallet := wallets.GetWallet(from)
-	// log.Print(from)
+
 	tx := NewUTXOTransaction(&wallet, to, amount, &UTXOSet)
 
 	if mineNow {
 		cbTx := NewCoinbaseTX(from, "")
 		txs := []*Transaction{cbTx, tx}
-		newBlock := bc.MineBlock(txs, from, nodeID)
+
+		newBlock := bc.MineBlock(txs)
 		UTXOSet.Update(newBlock)
 	} else {
 		sendTx(knownNodes[0], tx)
