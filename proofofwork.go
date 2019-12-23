@@ -30,7 +30,7 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 	var tar int
 
 	target := big.NewInt(1)
-	tar = targetBits - int(math.Round(0.21*targetBits*b.PercentBalance)) + int(math.Round(0.15*targetBits*b.PercentMine))
+	tar = targetBits - int(math.Round(0.21*targetBits*b.PercentBalance)) + int(math.Round(0.7*targetBits*b.PercentMine))
 
 	log.Print(tar)
 	target.Lsh(target, uint(256-tar))
